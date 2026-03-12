@@ -2,15 +2,16 @@
 
 ## High Priority
 - [x] Understand llama.cpp CLI options and flags
-- [ ] Learn about GGUF model formats and quantization types
-- [ ] Set up llama.cpp with GPU acceleration (CUDA/CLBlast)
+- [x] Learn about GGUF model formats and quantization types
+- [x] Set up llama.cpp with GPU acceleration (CUDA/CLBlast)
+  - Verified: NVIDIA GeForce RTX 3060 (12GB) detected with CUDA 8.6
 
 ## Medium Priority
-- [ ] Run llama.cpp as a server (API mode)
+- [x] Run llama.cpp as a server (API mode)
 - [ ] Explore model selection and trade-offs (size, quantization)
 - [ ] Set up OpenAI-compatible API with llama.cpp server
 - [ ] Learn about prompt engineering for local LLMs
 
 ## Low Priority
-- [ ] Research alternative backends (Ollama, LM Studio, vLLM)
 - [ ] Benchmark local LLM performance
+- [ ] Research alternative backends (Ollama, LM Studio, vLLM)
