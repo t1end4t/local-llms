@@ -8,10 +8,10 @@
 
 ## Medium Priority
 - [x] Run llama.cpp as a server (API mode)
-- [ ] Explore model selection and trade-offs (size, quantization)
-- [ ] Set up OpenAI-compatible API with llama.cpp server
-- [ ] Learn about prompt engineering for local LLMs
+- [x] Explore model selection and trade-offs (size, quantization)
+- [x] Set up OpenAI-compatible API with llama.cpp server
+- [x] Learn about prompt engineering for local LLMs
 
 ## Low Priority
-- [ ] Benchmark local LLM performance
-- [ ] Research alternative backends (Ollama, LM Studio, vLLM)
+- [x] Benchmark local LLM performance
+- [x] Research alternative backends (Ollama, LM Studio, vLLM)
