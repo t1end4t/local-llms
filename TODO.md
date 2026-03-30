@@ -10,7 +10,7 @@
 - [x] Verify CUDA toolkit version matches driver (`nvidia-smi`, `nvcc --version`)
 - [x] Install / build llama.cpp with CUDA support (`GGML_CUDA=1 make`)
 - [x] Smoke test: run a small model fully on GPU, confirm `n_gpu_layers` offloads all layers
-- [ ] Benchmark GPU utilization (`nvtop` or `nvidia-smi dmon`) during inference
+- [x] Benchmark GPU utilization (`nvtop` or `nvidia-smi dmon`) during inference
 - [x] Note max stable VRAM headroom (12GB minus OS/display usage ~= usable budget) -> should around 10GB model
 
 ---
@@ -35,7 +35,7 @@
 
 ### Steps
 
-- [ ] Download `Qwen3.5-9B Q4_K_M` (primary) — handles ~90% of tasks in LOCAL_LLM_TASKS
+- [x] Download `Qwen3.5-9B Q4_K_M` (primary) — handles ~90% of tasks in LOCAL_LLM_TASKS
 - [ ] Test against the 8 priority tasks from LOCAL_LLM_TASKS (`code explain`, `git commit`, `codebase Q&A`, `error log`, `test gen`, `PDF summary`, `config validate`, `shell cmd`)
 - [ ] If output quality on explanation/summary tasks is insufficient, download `Gemma-3-12b-it Q4_K_M` as quality-tier swap
 - [ ] Decide: keep one model loaded always, or hot-swap based on task type?
