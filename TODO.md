@@ -20,25 +20,23 @@
 > All from [unsloth Dynamic 2.0 Quants](https://huggingface.co/collections/unsloth/unsloth-dynamic-20-quants) collection.
 > Recommended quant: `Q4_K_M` — Q2_K is too aggressive (noticeably degraded code/reasoning quality), Q6_K+ is overkill given 10GB budget.
 
-### Two models, two roles
+### One model (single GPU)
 
-| Role | Model | Size | Quant | Est. VRAM | Why |
-|------|-------|------|-------|-----------|-----|
-| **Primary** — code + explanations + dev workflow | `Qwen3.5-9B-GGUF` | 9B | Q4_K_M | ~6GB | Code-tuned, 1.49M DLs, 4GB headroom for context |
-| **Quality tier** — long summaries + doc tasks | `Gemma-3-12b-it-GGUF` | 12B | Q4_K_M | ~8GB | Best instruction-tuning in budget, 2GB headroom |
+| Model | Size | Quant | Est. VRAM | Why |
+|-------|------|-------|-----------|-----|
+| **GLM-4.7-Flash** | 23B A3B | Q4_K_M | ~12GB | #1 on leaderboard, MoE fits in VRAM, tool-call capable |
 
 **Why not the others:**
-- **Q2_K 24–31B models** (Devstral, Qwen3-Coder-30B, Mistral-Small-24B) — 2-bit compression destroys code quality; a well-quantized 9B beats a Q2_K 30B
-- **Reasoning/thinking models** (DeepSeek-R1, Qwen3-Thinking) — overkill; no task in LOCAL_LLM_TASKS requires multi-step reasoning
-- **Sub-4B models** — too small for coherent code generation or explanation; useful only as routers, which is Phase 4+ complexity
-- **Multiple size variants** — adds download cost and swap overhead with marginal gain
+- **Qwen3.5-9B / small models** — not competitive on the leaderboard; GLM-4.7-Flash fits in the same 12GB and ranks far higher
+- **Gemma 3 12B** — not on the leaderboard at all; outclassed by GLM-4.7-Flash at the same VRAM budget
+- **GPT-OSS 20B / Codestral 22B** — need partial CPU offload, slower; GLM-4.7-Flash is better and fully in VRAM
+- **Qwen3-30B-A3B Q2_K_XL** — alternative if you want Qwen quality; similar VRAM but slower than GLM-4.7-Flash
 
 ### Steps
 
-- [x] Download `Qwen3.5-9B Q4_K_M` (primary) — handles ~90% of tasks in LOCAL_LLM_TASKS
+- [ ] Download `GLM-4.7-Flash Q4_K_M` — single model for all tasks
 - [ ] Test against the 8 priority tasks from LOCAL_LLM_TASKS (`code explain`, `git commit`, `codebase Q&A`, `error log`, `test gen`, `PDF summary`, `config validate`, `shell cmd`)
-- [ ] If output quality on explanation/summary tasks is insufficient, download `Gemma-3-12b-it Q4_K_M` as quality-tier swap
-- [ ] Decide: keep one model loaded always, or hot-swap based on task type?
+- [ ] If speed is too slow for simple tasks, consider swapping to `Qwen3-30B-A3B Q2_K_XL` (20–55 t/s)
 
 ---
 
