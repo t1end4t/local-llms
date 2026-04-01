@@ -12,9 +12,9 @@
 | Model | Quant | VRAM Est. | Speed | Notes |
 |---|---|---|---|---|
 | **GLM-4.7-Flash** (MoE 23B A3B) | Q4_K_M | ~12GB | moderate | #1 on leaderboard, tool-call capable, fits in VRAM |
-| **Qwen3-30B-A3B** | Q2_K_XL | ~11.8GB | 20–55 t/s | #5 on leaderboard, MoE magic, fully in VRAM |
-| **Nemotron-3-Nano** (30B A3B) | Q2_K_XL | ~12GB | moderate | #4 on leaderboard, NVIDIA MoE |
 | **GPT-OSS 20B** | Q4_K_M | ~14GB (partial) | ~15 t/s | #2 on leaderboard, partial offload to RAM |
+| **Nemotron-3-Nano** (30B A3B) | Q2_K_XL | ~12GB | moderate | #4 on leaderboard, NVIDIA MoE |
+| **Qwen3-30B-A3B** | Q2_K_XL | ~11.8GB | 20–55 t/s | #5 on leaderboard, MoE magic, fully in VRAM |
 | **Qwen3 14B** | IQ4_XS | ~8.5GB | ~15–20 t/s | Best dense reasoning that fully fits |
 | **Qwen2.5-Coder 7B** | Q8_0 | ~8GB | fast | Coding fast lane, fits fully |
 | **Codestral 22B** | Q4_K_M | ~14GB (partial) | ~10 t/s | #6 on leaderboard, code-focused |
@@ -30,12 +30,14 @@
 
 ### Vision / Multimodal
 
-| Model | Quant | Notes |
-|---|---|---|
-| **Qwen3-VL-8B** | IQ4_XS | Top pick VLM, ~71k ctx, multimodal, fast |
-| **GLM-4.6V-Flash 9B** | Q4_XL | Multimodal, tool-call capable |
-| **Llama 3.2 11B Vision** | Q4/Q5 | Good for image understanding |
-| **Qwen2-VL-7B** | Q4/Q5 | Solid VLM, fits comfortably |
+| Model | Quant | VRAM Est. | Notes |
+|---|---|---|---|
+| **DeepSeek VL2** (27B MoE) | Q4_K_M | ~15GB (partial) | #1 VL leaderboard, partial offload + `--n-cpu-moe` |
+| **DeepSeek VL2 Small** (16B MoE) | Q4_K_M | ~10GB | #2 VL leaderboard, fits fully in VRAM |
+| **DeepSeek VL2 Tiny** (3B) | Q4_K_M | ~3GB | #3 VL leaderboard, fastest, very low VRAM |
+| **Gemma 3 12B** | Q4_K_M | ~8.5GB | #4 VL leaderboard, strong vision, fits fully |
+| **Gemma 3 27B** | Q4_K_M | ~17GB (partial) | #5 VL leaderboard, best dense VL, partial offload |
+| **Gemma 3 4B** | Q4_K_M | ~3GB | #6 VL leaderboard, lightest, 100+ t/s |
 
 ---
 
@@ -71,8 +73,7 @@ Use `--n-gpu-layers` to control how many layers go to GPU. Remaining layers run 
 llama-server -m model.gguf -ngl 35
 
 # Or let llama.cpp auto-fit to available VRAM
-llama-server -m model.gguf --fit
-llama-server -m model.gguf -fitt 1  # keep 1GB VRAM free
+llama-server -m model.gguf --fit on
 ```
 
 ### MoE-Specific: CPU Expert Offload
@@ -169,8 +170,10 @@ llama-server \
 - **Qwen2.5 14B Q4_K_M** — best for knowledge/explanations (dense)
 
 ### Vision / Image Input
-- **Qwen3-VL-8B IQ4_XS** — top VLM pick, huge 71k context, fast
-- **GLM-4.6V-Flash 9B Q4_XL** — multimodal + tool-call capable
+- **DeepSeek VL2 Small Q4_K_M** — #2 VL leaderboard, best quality that fits fully (~10GB)
+- **DeepSeek VL2 Tiny Q4_K_M** — #3 VL leaderboard, fastest, great for quick tasks
+- **Gemma 3 12B Q4_K_M** — #4 VL leaderboard, strong vision, fits comfortably
+- **Gemma 3 4B Q4_K_M** — #6 VL leaderboard, lightest option, 100+ t/s
 - Must use vision-capable models — regular text models are "blind"
 
 ### Reasoning / Thinking Tasks
@@ -222,10 +225,47 @@ llama-server \
 ## Quick Decision Guide
 
 ```
-Need vision/images?         → Qwen3-VL-8B IQ4_XS  (top VLM, 71k ctx)
+Need vision/images?         → DeepSeek VL2 Small Q4_K_M  (#2 VL, fits in 12GB)  |  Gemma 3 12B Q4_K_M (dense)
 Best coding assistant?      → Qwen2.5-Coder 7B Q8_0  (fast)  |  Codestral 22B Q4_K_M (smart)
 Best quality in 12GB?       → GLM-4.7-Flash Q4_K_M  (#1 leaderboard, MoE, fits)
 Best speed workhorse?       → Qwen3 4B Q6_K  (100+ t/s)
 General daily driver?       → GLM-4.7-Flash Q4_K_M  (or Qwen3-30B-A3B Q2_K_XL)
 Want to go bigger?          → Add P102-100 GPU ($40) for +10GB VRAM
 ```
+
+---
+
+## Understanding Model File Size vs VRAM Usage
+
+**Why does a 17.5GB model fit in 12GB VRAM?**
+
+The model **file size on disk/RAM** ≠ **VRAM needed to run it**. Here's why:
+
+- **Quantization** (Q4, Q5, Q8) compresses weights to 4-8 bits instead of 16/32 bits
+- **GGUF format** stores these compressed weights efficiently
+- **`--fit on`** flag auto-offloads layers to GPU, spills remainder to RAM
+- **MoE models** (like GLM-4.7-Flash with 23B A3B) only activate ~3B params at a time
+
+**Example: GLM-4.7-Flash-UD-Q4_K_XL (17.5GB file)**
+- Actual VRAM: ~5-7GB (layers that fit in GPU) + KV cache (~1-2GB)
+- Overflow: ~10GB runs in system RAM (handled automatically by `--fit on`)
+- Result: Runs fast despite file size > VRAM!
+
+### Quick Estimation Formula
+
+For Q4 quantization on GGUF models:
+```
+Needed VRAM ≈ Model_GB_file_size / 3
+```
+
+So for your 12GB RTX 3060: supports ~30-36GB file size models
+And your 32GB RAM: plenty of buffer for overflow layers
+
+### Recommended Max File Sizes for RTX 3060 12GB
+
+| Quantization | Max Model File Size | Notes |
+|--------------|---------------------|-------|
+| Q4_K_M/S    | ~20-24GB            | Best balance of speed + quality |
+| Q5_K_L      | ~16-18GB            | Slightly slower, better quality |
+| Q6_K        | ~12-14GB            | More VRAM for weights, better quality |
+| Q8_0        | ~8-10GB             | Highest quality, fully on GPU |

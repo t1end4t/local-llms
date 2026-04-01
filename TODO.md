@@ -34,7 +34,7 @@
 
 ### Steps
 
-- [ ] Download `GLM-4.7-Flash Q4_K_M` — single model for all tasks
+- [x] Download `GLM-4.7-Flash Q4_K_M` — single model for all tasks
 - [ ] Test against the 8 priority tasks from LOCAL_LLM_TASKS (`code explain`, `git commit`, `codebase Q&A`, `error log`, `test gen`, `PDF summary`, `config validate`, `shell cmd`)
 - [ ] If speed is too slow for simple tasks, consider swapping to `Qwen3-30B-A3B Q2_K_XL` (20–55 t/s)
 
