@@ -2,7 +2,7 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-MODELS_DIR="$REPO_ROOT/models"
+MODELS_DIR="${MODELS_DIR:-$HOME/codebases/LOCAL-AI-MODELS/LLM}"
 MODELS_CONF="$REPO_ROOT/models.conf"
 
 # === Load model list from models.conf ===
