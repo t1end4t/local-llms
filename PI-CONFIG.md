@@ -1,10 +1,22 @@
-# Pi Coding Agent — Local Qwen3.6 35B Configuration
+# Pi Coding Agent — Local Model Configuration
 
-## 1. Fix Port Mismatch
+## Hardware
 
-Your `run-model-llama-cpp.sh` starts llama-server on **port 8080**, but your current `~/.pi/agent/models.json` points to port **8001**. Fix the `baseUrl`.
+RTX 3060 12 GB VRAM · 32 GB RAM · Ryzen 5 5500
 
-## 2. Update `~/.pi/agent/models.json`
+Strategy: **partial GPU offload** — don't load all layers to VRAM.
+Keeps RAM free for KV cache + OS. Better for coding-agent workloads
+where you want steady token generation, not batch throughput.
+
+## Available Models
+
+| Model | Type | Size | GPU layers | Context | Max gen | Notes |
+|-------|------|------|------------|---------|---------|-------|
+| Qwen3.6-35B-A3B Q4_K_M | MoE (3B active) | 21 GB | 18/40 | 40K | 32K | **Best fit** — fast, large context |
+| Qwen3.6-27B Q4_K_M | Dense | 16 GB | 36/64 | 16K | 8K | Slower, reduced context needed |
+| gemma-4-26B-A4B Q4_K_M | MoE (4B active) | 16 GB | 18/30 | 32K | 16K | Good alternative MoE |
+
+## 1. Update `~/.pi/agent/models.json`
 
 Replace the entire file with:
 
@@ -22,15 +34,36 @@ Replace the entire file with:
       "models": [
         {
           "id": "qwen3.6-35b-a3b",
-          "name": "Qwen3.6 35B A3B (llama.cpp local)",
+          "name": "Qwen3.6 35B A3B (local)",
           "reasoning": true,
           "input": ["text"],
-          "contextWindow": 65536,
+          "contextWindow": 40960,
           "maxTokens": 32768,
           "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 },
           "compat": {
             "thinkingFormat": "qwen-chat-template"
           }
+        },
+        {
+          "id": "qwen3.6-27b",
+          "name": "Qwen3.6 27B (local)",
+          "reasoning": true,
+          "input": ["text"],
+          "contextWindow": 16384,
+          "maxTokens": 8192,
+          "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 },
+          "compat": {
+            "thinkingFormat": "qwen-chat-template"
+          }
+        },
+        {
+          "id": "gemma-4-26b-a4b",
+          "name": "Gemma 4 26B A4B (local)",
+          "reasoning": false,
+          "input": ["text"],
+          "contextWindow": 32768,
+          "maxTokens": 16384,
+          "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0 }
         }
       ]
     }
@@ -38,20 +71,7 @@ Replace the entire file with:
 }
 ```
 
-### Key changes explained
-
-| Field | Value | Why |
-|-------|-------|-----|
-| `baseUrl` | `http://localhost:8080/v1` | Matches your `run-model-llama-cpp.sh` `--port 8080` |
-| `contextWindow` | `65536` | Matches your `-c 65536` llama-server flag |
-| `maxTokens` | `32768` | Matches your `-n 32768` llama-server flag |
-| `thinkingFormat` | `qwen-chat-template` | Tells Pi to send `chat_template_kwargs.enable_thinking`, which your llama-server reads via `--chat-template-kwargs '{"preserve_thinking": true}'` |
-| `supportsDeveloperRole` | `false` | llama.cpp does not understand the `developer` role; Pi falls back to `system` |
-| `supportsReasoningEffort` | `false` | llama.cpp does not support OpenAI-style `reasoning_effort` |
-
-## 3. Update `~/.pi/agent/settings.json`
-
-Replace the entire file with:
+## 2. Update `~/.pi/agent/settings.json`
 
 ```json
 {
@@ -62,26 +82,27 @@ Replace the entire file with:
 }
 ```
 
-## 4. Running
+## 3. Running
 
 ```bash
-# Terminal 1 — start llama-server
-scripts/run-model-llama-cpp.sh Qwen3.6-35B-A3B-UD-Q4_K_XL.gguf
+# Terminal 1 — start llama-server (pick one)
+scripts/run-model-llama-cpp.sh Qwen3.6-35B-A3B-UD-Q4_K_M.gguf   # recommended
+scripts/run-model-llama-cpp.sh Qwen3.6-27B-Q4_K_M.gguf
+scripts/run-model-llama-cpp.sh gemma-4-26B-A4B-it-UD-Q4_K_M.gguf
 
 # Terminal 2 — start Pi (from any project directory)
 pi
 ```
 
-Inside Pi:
-- `/model` — verify it sees your local model
-- `/provider` — verify provider is `llama-cpp`
-- Just start chatting
+Inside Pi: use `/model` to switch between models (restart llama-server with the matching .gguf first).
 
-## 5. Troubleshooting
+## 4. Troubleshooting
 
 | Problem | Fix |
 |---------|-----|
-| Pi says "no such file or directory" for sessions | `mkdir -p ~/.pi/agent/sessions` |
-| Pi can't connect to model | Verify llama-server is running on port 8080: `curl http://localhost:8080/v1/models` |
-| Thinking blocks not shown | Ensure `reasoning: true` is set in models.json and `thinkingFormat: "qwen-chat-template"` is present |
-| Read-only filesystem error | Pi's session dir may be on a read-only mount. Set `sessionDir` in settings.json to a writable path, e.g. `"sessionDir": "~/.local/share/pi-sessions"` |
+| Pi can't connect | Verify llama-server is running: `curl http://localhost:8080/v1/models` |
+| `unknown model architecture: 'gemma4'` | Upgrade `llama.cpp` / `llama-server`; old builds cannot load Gemma 4 GGUF files |
+| OOM / crash | Lower `-ngl` by 2-4 layers, or reduce context with `-c <value>` via extra args |
+| Thinking blocks not shown | Ensure `reasoning: true` + `thinkingFormat` in models.json |
+| Slow generation | MoE models (A3B/A4B) are much faster — prefer those over dense 27B |
+| Session dir error | `mkdir -p ~/.pi/agent/sessions` |

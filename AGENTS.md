@@ -1,3 +1,11 @@
+## 0. Never Run Downloads or Long Commands
+
+**Never execute `huggingface-cli download`, `hf download`, `wget`, or any model/data download command.**
+
+- Always present the model name, file size, and download command for the user to run.
+- Never run commands that take minutes to hours — only fast queries (ls, grep, curl head, etc.).
+- If a download is needed, show the exact command and let the user run it.
+
 ## Project context
 
 This project has a thinking space in the second-brain vault.

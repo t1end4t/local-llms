@@ -18,7 +18,7 @@ while IFS= read -r line; do
   file="${line##*::}"
 
   echo "Downloading $file from $repo ..."
-  huggingface-cli download "$repo" "$file" --local-dir "$MODELS_DIR"
+  hf download "$repo" "$file" --local-dir "$MODELS_DIR"
   echo "Done: $file"
 done < "$CONF"
 
