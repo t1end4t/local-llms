@@ -2,11 +2,9 @@
 set -euo pipefail
 
 # Hardware target: RTX 3060 12 GB VRAM + 32 GB RAM
-# Strategy: partial GPU offload — keep some layers on CPU so the OS
-# and KV cache still fit in RAM.  Good for coding-agent workloads
-# where latency-per-token matters more than batch throughput.
-#
-# VRAM budget: ~10.5 GB usable (desktop/display takes ~1-1.5 GB)
+# Strategy: Qwen3.6-35B-A3B as main daily-driver model.
+# Balanced for coding-agent workloads: decent context, stable VRAM use,
+# and faster response than dense 27B models.
 
 MODELS_DIR="${MODELS_DIR:-$HOME/codebases/LOCAL-AI-MODELS}"
 
@@ -39,41 +37,32 @@ if [[ "$MODEL_FILE" == gemma-4-* ]] && [[ -n "$LLAMA_VERSION" ]] && (( LLAMA_VER
 fi
 
 # ── Per-model profiles ──────────────────────────────────────────────
-# ngl  = layers offloaded to GPU (not all → partial offload)
-# ctx  = context length (tokens)
+# ngl  = layers offloaded to GPU
+# ctx  = context length
 # nmax = max generation length
-#
-# VRAM sizing (~10.5 GB usable after desktop/display):
-#   Qwen3.6-35B-A3B  — 40 layers, ~21 GB weights, MoE (3B active)
-#     ~525 MB/layer → 18 layers ≈ 9.5 GB, safe with KV overhead
-#   Qwen3.6-27B      — 64 layers, ~16 GB weights, dense
-#     ~250 MB/layer → 36 layers ≈ 9 GB, safe with KV overhead
-#   gemma-4-26B-A4B  — 30 layers, ~16 GB weights, MoE (4B active)
-#     ~533 MB/layer → 18 layers ≈ 9.6 GB, safe with KV overhead
 
 NGL=0
-CTX=32768
-NMAX=16384
+CTX=8192
+NMAX=4096
 EXTRA_ARGS=()
 
 case "$MODEL_FILE" in
   Qwen3.6-35B-A3B*)
-    NGL=18
-    CTX=40960
-    NMAX=32768
-    EXTRA_ARGS=(--chat-template-kwargs '{"preserve_thinking": true}')
-    ;;
-  Qwen3.6-27B*)
-    NGL=36
-    CTX=16384
+    # RTX 3060 12 GB balanced profile
+    # If VRAM OOMs: lower NGL to 14 or CTX to 16384.
+    # If stable and you want more speed: try NGL=18 with CTX=16384.
+    NGL=16
+    CTX=24576
     NMAX=8192
     EXTRA_ARGS=(--chat-template-kwargs '{"preserve_thinking": true}')
     ;;
+
   gemma-4-26B-A4B*)
-    NGL=18
-    CTX=32768
-    NMAX=16384
+    NGL=16
+    CTX=24576
+    NMAX=8192
     ;;
+
   *)
     echo "Warning: no tuned profile for $MODEL_FILE — using conservative defaults" >&2
     NGL=0
@@ -83,7 +72,7 @@ case "$MODEL_FILE" in
 esac
 
 echo "── Profile ────────────────────────────────────────"
-echo "  Model : $MODEL_FILE"
+echo "  Model      : $MODEL_FILE"
 echo "  GPU layers : $NGL"
 echo "  Context    : $CTX tokens"
 echo "  Max gen    : $NMAX tokens"
@@ -96,10 +85,10 @@ exec llama-server \
   -ngl "$NGL" \
   -c "$CTX" \
   -n "$NMAX" \
-  --no-context-shift \
   --temp 0.6 \
   --top-p 0.95 \
   --top-k 20 \
+  --min-p 0.00 \
   --repeat-penalty 1.00 \
   --presence-penalty 0.00 \
   -fa on \
