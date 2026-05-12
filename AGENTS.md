@@ -1,28 +1,55 @@
-## 0. Never Run Downloads or Long Commands
+# Repository Instructions
 
-**Never execute `huggingface-cli download`, `hf download`, `wget`, or any model/data download command.**
+This repo manages local AI model inventory, metadata, commands, and lightweight tooling.
 
-- Always present the model name, file size, and download command for the user to run.
-- Never run commands that take minutes to hours — only fast queries (ls, grep, curl head, etc.).
-- If a download is needed, show the exact command and let the user run it.
+## Critical Safety Rules
 
-## Project context
+- Never run model/data downloads: `huggingface-cli download`, `hf download`, `wget`, or similar.
+- Never run commands likely to take minutes or hours.
+- Use only fast inspection commands such as `ls`, `rg`, `sed`, `head`, or quick metadata checks.
+- If a download is needed, show the exact command for the user to run manually.
+- Do not edit files outside this repository unless the user explicitly asks.
 
-This project has a thinking space in the second-brain vault.
+## Project Scope
 
-- **Thinking space**: `../../second-brain/1-Projects/Local-LLM-Playground/`
-- Before starting work, read `Brief.md` and `TODO.md` from there for project context, goals, and current status.
-- You may also check `Experiments.md`, `Decisions.md`, and `Dead-ends.md` if they exist, to avoid repeating past work.
-- **Do NOT edit any files outside this repository.** The second-brain is read-only from here.
+- Include all local AI assets: LLMs, VLMs, diffusion models, diffusion LLMs, embeddings, rerankers, and related tools.
+- Do not assume this repo is only for text-generation LLMs.
+- Treat this repo as the source of truth for model inventory and local usage commands.
+- There is no external thinking-space or second-brain dependency for this repo.
 
-## After completing work
+## Local Model Path
 
-When finishing a task or session, remind the user:
+- Default model root: `$HOME/LOCAL-AI-MODELS`.
+- Do not assume models live under `$HOME/codebases`.
+- Prefer configurable paths via `MODELS_DIR`; keep `$HOME/LOCAL-AI-MODELS` as the fallback default.
 
-> Remember to update your second-brain project notes:
-> - Update `TODO.md` to check off completed items
-> - Log any experiments in `Experiments.md`
-> - Record key decisions in `Decisions.md`
-> - Note any dead ends in `Dead-ends.md`
-> - Add meaningful results to `Results.md`
-> - Update `Brief.md` if the project direction changed
+## Model Metadata Standards
+
+When adding or updating model entries, keep available metadata accurate:
+
+- Model name
+- Model type or task
+- Format and quantization
+- File size
+- Source URL or Hugging Face repo
+- Local path
+- Intended use
+- Required runtime or command
+
+## Workflow
+
+- Inspect before editing.
+- Make surgical changes only.
+- Match existing style.
+- Avoid speculative features or abstractions.
+- Remove only unused code introduced by your own changes.
+- If something is unclear, state the assumption or ask before changing files.
+
+## Completion Summary
+
+After completing work, summarize:
+
+- Changed files
+- Important assumptions
+- Verification performed
+- Manual commands the user should run, especially downloads

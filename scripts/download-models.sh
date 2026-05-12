@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-MODELS_DIR="${MODELS_DIR:-$HOME/codebases/LOCAL-AI-MODELS}"
+MODELS_DIR="${MODELS_DIR:-$HOME/LOCAL-AI-MODELS}"
 CONF="$(dirname "$0")/../models.conf"
 
 if [[ ! -f "$CONF" ]]; then
@@ -15,11 +15,21 @@ while IFS= read -r line; do
   [[ -z "$line" || "$line" == \#* ]] && continue
 
   repo="${line%%::*}"
-  file="${line##*::}"
+  remainder="${line#*::}"
+  if [[ "$remainder" == *"::"* ]]; then
+    hf_file="${remainder%%::*}"
+    local_name="${remainder##*::}"
+  else
+    hf_file="$remainder"
+    local_name="$remainder"
+  fi
 
-  echo "Downloading $file from $repo ..."
-  hf download "$repo" "$file" --local-dir "$MODELS_DIR"
-  echo "Done: $file"
+  echo "Downloading $hf_file from $repo ..."
+  hf download "$repo" "$hf_file" --local-dir "$MODELS_DIR"
+  if [[ "$hf_file" != "$local_name" ]]; then
+    mv "$MODELS_DIR/$hf_file" "$MODELS_DIR/$local_name"
+  fi
+  echo "Done: $local_name"
 done < "$CONF"
 
 echo "All models downloaded to $MODELS_DIR"
