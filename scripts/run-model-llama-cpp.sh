@@ -52,27 +52,23 @@ fi
 # ngl  = layers offloaded to GPU
 # ctx  = context length
 # nmax = max generation length
+# cpn  = checkpoint interval during prefill (-1 disables)
 
 NGL=0
 CTX=32768
 NMAX=8192
+CPN=-1
 EXTRA_ARGS=()
 
 case "$MODEL_FILE" in
   Qwen3.6-35B-A3B*)
     # RTX 3060 12 GB balanced profile (48k context for long prompts)
-    # If VRAM OOMs: lower NGL to 14 or CTX to 32768.
-    # If stable and you want more speed: try NGL=18 with CTX=32768.
-    NGL=16
+    # If VRAM OOMs: lower NGL to 12 or CTX to 32768.
+    # If stable and you want more speed: try NGL=16 with CTX=32768.
+    NGL=14
     CTX=49152
     NMAX=8192
-    MMPROJ_PATH="$MODELS_DIR/mmproj-Qwen3.6-35B-A3B-F16.gguf"
-    if [[ ! -f "$MMPROJ_PATH" ]]; then
-      echo "Error: vision projector not found at $MMPROJ_PATH" >&2
-      echo "Download it with: hf download unsloth/Qwen3.6-35B-A3B-GGUF mmproj-F16.gguf --local-dir \"$MODELS_DIR\" && mv \"$MODELS_DIR/mmproj-F16.gguf\" \"$MMPROJ_PATH\"" >&2
-      exit 1
-    fi
-    EXTRA_ARGS=(--mmproj "$MMPROJ_PATH" --chat-template-kwargs '{"preserve_thinking": true}')
+    EXTRA_ARGS=(--chat-template-kwargs '{"preserve_thinking": true}')
     ;;
 
   # Qwen3.6-27B*)
@@ -118,6 +114,7 @@ echo "  Model      : $MODEL_FILE"
 echo "  GPU layers : $NGL"
 echo "  Context    : $CTX tokens"
 echo "  Max gen    : $NMAX tokens"
+echo "  Checkpoint : disabled"
 echo "──────────────────────────────────────────────────"
 
 exec llama-server \
@@ -133,7 +130,10 @@ exec llama-server \
   --min-p 0.00 \
   --repeat-penalty 1.00 \
   --presence-penalty 0.00 \
-  -fa on \
-  -ctk q8_0 -ctv q8_0 \
+  --no-warmup \
+  --spec-type none \
+  --ctx-checkpoints 0 \
+  --checkpoint-every-n-tokens "$CPN" \
+  -fa off \
   "${EXTRA_ARGS[@]}" \
   "$@"
