@@ -52,12 +52,10 @@ fi
 # ngl  = layers offloaded to GPU
 # ctx  = context length
 # nmax = max generation length
-# cpn  = checkpoint interval during prefill (-1 disables)
 
 NGL=0
 CTX=32768
 NMAX=8192
-CPN=-1
 EXTRA_ARGS=()
 
 case "$MODEL_FILE" in
@@ -133,7 +131,6 @@ exec llama-server \
   --no-warmup \
   --spec-type none \
   --ctx-checkpoints 0 \
-  --checkpoint-every-n-tokens "$CPN" \
   -fa off \
   "${EXTRA_ARGS[@]}" \
   "$@"
